@@ -1,0 +1,12 @@
+name: Require Checklist
+description: Ensure that any checklists in an issue/pull request are completed
+runs:
+  using: docker
+  image: Dockerfile
+branding:
+  icon: check-square
+  color: gray-dark
+inputs:
+  requireChecklist:
+    description: Require a checklist to exist
+    default: false
