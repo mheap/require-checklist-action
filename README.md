@@ -1,6 +1,7 @@
 # Require Checklist
 
-A GitHub Action that fails a pull request if there are any incomplete checklists in the issue body and/or comments.
+A GitHub Action that fails a pull request if there are any incomplete checklists in the issue body and/or comments. The action is triggered when a pull request is opened, when  comments are added to it (regular comments only, not review or code comments), and when comments are edited.
+
 
 ## Usage
 
@@ -19,6 +20,7 @@ jobs:
     steps:
       - uses: mheap/require-checklist-action@master
         with:
-          github_token: ${{ github.token }}
           requireChecklist: false # Set to true if needed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
