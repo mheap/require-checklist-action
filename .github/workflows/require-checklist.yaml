@@ -1,7 +1,7 @@
 name: Require Checklist
 on:
   pull_request:
-    types: [opened, edited]
+    types: [opened, edited, synchronize]
   issue_comment:
     types: [created, edited, deleted]
 jobs:
@@ -10,6 +10,6 @@ jobs:
     steps:
       - uses: larsa4d/require-checklist-action@master
         with:
-          github_token: ${{ github.token }}
           requireChecklist: false # Set to true if needed
-
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
