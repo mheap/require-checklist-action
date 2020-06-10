@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: mheap/require-checklist-action@master
         with:
-          github_token: ${{ github.token }}
           requireChecklist: false # Set to true if needed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

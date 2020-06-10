@@ -6,8 +6,8 @@ Toolkit.run(async (tools) => {
   // for comments to issues (not pull requests).
   if (tools.context.eventName === "issue_comment" &&
     !tools.context.payload.issue.pull_request) {
-    tools.exit.neutral('require-checklist action is not applicable to issue comments.');
-    return;
+    //tools.exit.neutral('require-checklist action is not applicable to issue comments.');
+    //return;
   }
 
   const bodyList = [];
@@ -38,7 +38,10 @@ Toolkit.run(async (tools) => {
     }
   }
 
-  if (tools.inputs.requireChecklist != "false" && !containsChecklist) {
+  if (tools.inputs.requireChecklist && !containsChecklist) {
     tools.exit.failure("Checklist required but not detected");
+    return;
   }
+
+  tools.exit.success("There are no incomplete checklist items.");
 });

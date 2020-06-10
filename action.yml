@@ -7,9 +7,6 @@ branding:
   icon: check-square
   color: gray-dark
 inputs:
-  github_token:
-    description: "Set to ${{ github.token }} to pass an access token to the action."
-    required: true
   requireChecklist:
     description: Require a checklist to exist
     required: true
