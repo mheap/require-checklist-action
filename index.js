@@ -38,6 +38,8 @@ Toolkit.run(async (tools) => {
     }
   }
 
+  tools.log(tools.inputs.requireChecklist)
+  tools.log(typeof tools.inputs.requireChecklist)
   if (tools.inputs.requireChecklist && !containsChecklist) {
     tools.exit.failure("Checklist required but not detected");
     return;
