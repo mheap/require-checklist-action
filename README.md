@@ -1,6 +1,6 @@
 # Require Checklist
 
-A GitHub Action that fails a pull request if there are any incomplete checklists in the issue body and/or comments.
+A GitHub Action that fails a pull request if there are any incomplete checklists in the issue body and/or comments. The action is triggered when a pull request is opened, when regular comments are added (not review or code comments), and when comments are edited.
 
 ## Usage
 
