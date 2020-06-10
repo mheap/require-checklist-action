@@ -1,17 +1,24 @@
 # Require Checklist
 
-GitHub Action that fails a PR if there are any incomplete checklists in the issue body and/or comments
+A GitHub Action that fails a pull request if there are any incomplete checklists in the issue body and/or comments.
 
 ## Usage
 
+Create a file named `.github/workflows/require-checklist.yaml` (or any name in that directory) with the following content:
+
 ```yaml
 name: Require Checklist
-on: pull_request
+on:
+  pull_request:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited, deleted]
 jobs:
-  my-job:
+  job1:
     runs-on: ubuntu-16.04
     steps:
       - uses: mheap/require-checklist-action@master
         with:
+          github_token: ${{ github.token }}
           requireChecklist: false # Set to true if needed
 ```

@@ -2,6 +2,14 @@ const { Toolkit } = require("actions-toolkit");
 
 // Run your GitHub Action!
 Toolkit.run(async (tools) => {
+  // This action is triggerd on issue_comment events, but ignore events
+  // for comments to issues (not pull requests).
+  if (tools.context.eventName === "issue_comment" &&
+    !tools.context.payload.issue.pull_request) {
+    tools.exit.neutral('require-checklist action is not applicable to issue comments.');
+    return;
+  }
+
   const bodyList = [];
 
   const { data: issue } = await tools.github.issues.get({

@@ -1,0 +1,15 @@
+name: Require Checklist
+on:
+  pull_request:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited, deleted]
+jobs:
+  job1:
+    runs-on: ubuntu-16.04
+    steps:
+      - uses: larsa4d/require-checklist-action@master
+        with:
+          github_token: ${{ github.token }}
+          requireChecklist: false # Set to true if needed
+
