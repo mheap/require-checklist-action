@@ -9,4 +9,5 @@ branding:
 inputs:
   requireChecklist:
     description: Require a checklist to exist
+    required: true
     default: false
