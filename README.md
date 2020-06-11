@@ -13,5 +13,5 @@ jobs:
     steps:
       - uses: mheap/require-checklist-action@master
         with:
-          requireChecklist: false # Set to true if needed
+          requireChecklist: false # If this is true and there are no checklists detected, the action will fail
 ```
