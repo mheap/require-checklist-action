@@ -1,7 +1,6 @@
 const { Toolkit } = require("actions-toolkit");
 const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+(.*)/g;
 
-// Run your GitHub Action!
 Toolkit.run(async (tools) => {
   const bodyList = [];
 
@@ -31,23 +30,28 @@ Toolkit.run(async (tools) => {
       containsChecklist = true;
 
       if (is_complete) {
-        tools.log.success('Completed task list item: ' + item[2]);
+        tools.log.success("Completed task list item: " + item[2]);
       } else {
-        tools.log.fatal('Incomplete task list item: ' + item[2]);
+        tools.log.fatal("Incomplete task list item: " + item[2]);
         incompleteItems.push(item[2]);
       }
     }
   }
 
   if (incompleteItems.length > 0) {
-    tools.exit.failure("A task list item is not marked as completed: " + incompleteItems.join(", ") + ".");
+    tools.exit.failure(
+      "The following items are not marked as completed: " +
+        incompleteItems.join(", ")
+    );
     return;
   }
 
   if (tools.inputs.requireChecklist != "false" && !containsChecklist) {
-    tools.exit.failure("No task list was present and requireChecklist is turned on.");
+    tools.exit.failure(
+      "No task list was present and requireChecklist is turned on"
+    );
     return;
   }
 
-  tools.exit.success("There are no incomplete task list items.");
+  tools.exit.success("There are no incomplete task list items");
 });
