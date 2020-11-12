@@ -15,7 +15,7 @@ jobs:
   job1:
     runs-on: ubuntu-16.04
     steps:
-      - uses: mheap/require-checklist-action@master
+      - uses: mheap/require-checklist-action@v1
         with:
           requireChecklist: false # If this is true and there are no checklists detected, the action will fail
         env:
