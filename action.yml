@@ -1,8 +1,8 @@
 name: Require Checklist
 description: Ensure that any checklists in an issue/pull request are completed
 runs:
-  using: docker
-  image: Dockerfile
+  using: node12
+  main: dist/index.js
 branding:
   icon: check-square
   color: gray-dark
