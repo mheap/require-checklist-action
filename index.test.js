@@ -110,6 +110,32 @@ describe("Require Checklist", () => {
       "The following items are not marked as completed: Two, Three"
     );
   });
+
+  it("handles issues with empty body, requireChecklist disabled", async () => {
+    process.env.INPUT_REQUIRECHECKLIST = "false";
+
+    mockIssueBody(null);
+    mockIssueComments(["No checklist in comment"]);
+
+    tools.exit.success = jest.fn();
+    await action(tools);
+    expect(tools.exit.success).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
+  it("handles issues with empty body, requireChecklist enabled", async () => {
+    process.env.INPUT_REQUIRECHECKLIST = "true";
+
+    mockIssueBody(null);
+    mockIssueComments(["No checklist in comment"]);
+
+    tools.exit.failure = jest.fn();
+    await action(tools);
+    expect(tools.exit.failure).toBeCalledWith(
+      "No task list was present and requireChecklist is turned on"
+    );
+  });
 });
 
 function mockIssueBody(body) {

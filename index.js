@@ -8,7 +8,9 @@ Toolkit.run(async (tools) => {
     ...tools.context.issue,
   });
 
-  bodyList.push(issue.body);
+  if (issue.body) {
+    bodyList.push(issue.body)
+  };
 
   const { data: comments } = await tools.github.issues.listComments({
     ...tools.context.issue,
