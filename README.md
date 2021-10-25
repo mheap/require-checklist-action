@@ -11,6 +11,8 @@ name: Require Checklist
 on:
   pull_request:
     types: [opened, edited, synchronize]
+  issues:
+    types: [opened, edited, deleted]
 jobs:
   job1:
     runs-on: ubuntu-16.04
