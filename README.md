@@ -10,7 +10,7 @@ Create a file named `.github/workflows/require-checklist.yaml` (or any name in t
 name: Require Checklist
 on:
   pull_request:
-    types: [opened, edited]
+    types: [opened, edited, synchronize]
 jobs:
   job1:
     runs-on: ubuntu-16.04
