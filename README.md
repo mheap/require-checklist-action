@@ -15,13 +15,12 @@ on:
     types: [opened, edited, deleted]
 jobs:
   job1:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: mheap/require-checklist-action@v1
+      - uses: mheap/require-checklist-action@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           requireChecklist: false # If this is true and there are no checklists detected, the action will fail
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Inapplicable checklist items
