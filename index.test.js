@@ -1,4 +1,6 @@
-const { Toolkit } = require("actions-toolkit");
+const action = require(".");
+const core = require("@actions/core");
+const github = require("@actions/github");
 const nock = require("nock");
 nock.disableNetConnect();
 
@@ -8,14 +10,10 @@ process.env.GITHUB_ACTOR = "YOUR_USERNAME";
 process.env.GITHUB_REPOSITORY = "YOUR_USERNAME/action-test";
 process.env.GITHUB_WORKSPACE = "/tmp/github/workspace";
 process.env.GITHUB_SHA = "fake-sha-a1c85481edd2ea7d19052874ea3743caa8f1bdf6";
+process.env.INPUT_TOKEN = "FAKE_GITHUB_TOKEN";
 
 describe("Require Checklist", () => {
-  let action, tools;
-
-  Toolkit.run = jest.fn((actionFn) => {
-    action = actionFn;
-  });
-  require(".");
+  let tools;
 
   beforeEach(() => {
     jest.resetModules();
@@ -32,9 +30,9 @@ describe("Require Checklist", () => {
     mockIssueBody("No checklist in the body");
     mockIssueComments(["Or in the comments"]);
 
-    tools.exit.success = jest.fn();
+    console.log = jest.fn();
     await action(tools);
-    expect(tools.exit.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
   });
@@ -45,19 +43,18 @@ describe("Require Checklist", () => {
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] Three");
     mockIssueComments(["- [x] Comment done"]);
 
-    tools.log.success = jest.fn();
-    tools.exit.success = jest.fn();
+    console.log = jest.fn();
 
     await action(tools);
 
-    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
-    expect(tools.log.success).toBeCalledWith("Completed task list item: Two");
-    expect(tools.log.success).toBeCalledWith("Completed task list item: Three");
-    expect(tools.log.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Completed task list item: Two");
+    expect(console.log).toBeCalledWith("Completed task list item: Three");
+    expect(console.log).toBeCalledWith(
       "Completed task list item: Comment done"
     );
 
-    expect(tools.exit.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
   });
@@ -68,9 +65,9 @@ describe("Require Checklist", () => {
     mockIssueBody("No checklist in the body");
     mockIssueComments(["Or in the comments"]);
 
-    tools.exit.failure = jest.fn();
+    core.setFailed = jest.fn();
     await action(tools);
-    expect(tools.exit.failure).toBeCalledWith(
+    expect(core.setFailed).toBeCalledWith(
       "No task list was present and requireChecklist is turned on"
     );
   });
@@ -79,16 +76,15 @@ describe("Require Checklist", () => {
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three");
     mockIssueComments(["No checklist in comment"]);
 
-    tools.log.success = jest.fn();
-    tools.log.fatal = jest.fn();
-    tools.exit.failure = jest.fn();
+    console.log = jest.fn();
+    core.setFailed = jest.fn();
     await action(tools);
 
-    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
-    expect(tools.log.fatal).toBeCalledWith("Incomplete task list item: Two");
-    expect(tools.log.fatal).toBeCalledWith("Incomplete task list item: Three");
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Two");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Three");
 
-    expect(tools.exit.failure).toBeCalledWith(
+    expect(core.setFailed).toBeCalledWith(
       "The following items are not marked as completed: Two, Three"
     );
   });
@@ -97,13 +93,12 @@ describe("Require Checklist", () => {
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [ ] ~Two~");
     mockIssueComments(["No checklist in comment"]);
 
-    tools.log.success = jest.fn();
-    tools.exit.success = jest.fn();
+    console.log = jest.fn();
     await action(tools);
 
-    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Completed task list item: One");
 
-    expect(tools.exit.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
   });
@@ -112,16 +107,16 @@ describe("Require Checklist", () => {
     mockIssueBody("Nothing in the body");
     mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"]);
 
-    tools.log.success = jest.fn();
-    tools.log.fatal = jest.fn();
-    tools.exit.failure = jest.fn();
+    console.log = jest.fn();
+    console.log = jest.fn();
+    core.setFailed = jest.fn();
     await action(tools);
 
-    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
-    expect(tools.log.fatal).toBeCalledWith("Incomplete task list item: Two");
-    expect(tools.log.fatal).toBeCalledWith("Incomplete task list item: Three");
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Two");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Three");
 
-    expect(tools.exit.failure).toBeCalledWith(
+    expect(core.setFailed).toBeCalledWith(
       "The following items are not marked as completed: Two, Three"
     );
   });
@@ -130,13 +125,12 @@ describe("Require Checklist", () => {
     mockIssueBody("Nothing in the body");
     mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] ~Two~"]);
 
-    tools.log.success = jest.fn();
-    tools.exit.success = jest.fn();
+    console.log = jest.fn();
     await action(tools);
 
-    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Completed task list item: One");
 
-    expect(tools.exit.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
   });
@@ -147,9 +141,8 @@ describe("Require Checklist", () => {
     mockIssueBody(null);
     mockIssueComments(["No checklist in comment"]);
 
-    tools.exit.success = jest.fn();
     await action(tools);
-    expect(tools.exit.success).toBeCalledWith(
+    expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
   });
@@ -160,9 +153,9 @@ describe("Require Checklist", () => {
     mockIssueBody(null);
     mockIssueComments(["No checklist in comment"]);
 
-    tools.exit.failure = jest.fn();
+    core.setFailed = jest.fn();
     await action(tools);
-    expect(tools.exit.failure).toBeCalledWith(
+    expect(core.setFailed).toBeCalledWith(
       "No task list was present and requireChecklist is turned on"
     );
   });
@@ -188,18 +181,8 @@ function mockIssueComments(comments) {
 }
 
 function mockEvent(name, mockPayload) {
-  jest.mock(
-    "/github/workspace/event.json",
-    () => {
-      return mockPayload;
-    },
-    {
-      virtual: true,
-    }
-  );
+  github.context.payload = mockPayload;
 
   process.env.GITHUB_EVENT_NAME = name;
   process.env.GITHUB_EVENT_PATH = "/github/workspace/event.json";
-
-  return new Toolkit();
 }
