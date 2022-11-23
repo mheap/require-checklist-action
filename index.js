@@ -1,5 +1,5 @@
 const { Toolkit } = require("actions-toolkit");
-const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+(.*)/g;
+const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+((?!~).*)/g;
 
 Toolkit.run(async (tools) => {
   const bodyList = [];

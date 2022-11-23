@@ -93,6 +93,21 @@ describe("Require Checklist", () => {
     );
   });
 
+  it("handles checklist with inapplicable items in body", async () => {
+    mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [ ] ~Two~");
+    mockIssueComments(["No checklist in comment"]);
+
+    tools.log.success = jest.fn();
+    tools.exit.success = jest.fn();
+    await action(tools);
+
+    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
+
+    expect(tools.exit.success).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
   it("handles incomplete checklist in comments", async () => {
     mockIssueBody("Nothing in the body");
     mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"]);
@@ -108,6 +123,21 @@ describe("Require Checklist", () => {
 
     expect(tools.exit.failure).toBeCalledWith(
       "The following items are not marked as completed: Two, Three"
+    );
+  });
+
+  it("handles checklist with inapplicable items in comments", async () => {
+    mockIssueBody("Nothing in the body");
+    mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] ~Two~"]);
+
+    tools.log.success = jest.fn();
+    tools.exit.success = jest.fn();
+    await action(tools);
+
+    expect(tools.log.success).toBeCalledWith("Completed task list item: One");
+
+    expect(tools.exit.success).toBeCalledWith(
+      "There are no incomplete task list items"
     );
   });
 
