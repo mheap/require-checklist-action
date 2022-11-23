@@ -19,7 +19,6 @@ jobs:
     steps:
       - uses: mheap/require-checklist-action@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           requireChecklist: false # If this is true and there are no checklists detected, the action will fail
 ```
 
