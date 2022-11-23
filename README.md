@@ -23,3 +23,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Inapplicable checklist items
+
+In case there are some items that are not applicable in given checklist they can be ~stroked through~ and this action will ignore them. For example:
+
+- [X] Applicable item
+- [ ] ~Inapplicable item~
