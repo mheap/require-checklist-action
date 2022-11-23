@@ -1,19 +1,26 @@
-const { Toolkit } = require("actions-toolkit");
+const core = require("@actions/core");
+const github = require("@actions/github");
+
 const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+((?!~).*)/g;
 
-Toolkit.run(async (tools) => {
+async function action() {
   const bodyList = [];
 
-  const { data: issue } = await tools.github.issues.get({
-    ...tools.context.issue,
+  const token = core.getInput("token");
+  const octokit = github.getOctokit(token);
+
+  const { data: issue } = await octokit.rest.issues.get({
+    ...github.context.repo,
+    issue_number: github.context.issue.number,
   });
 
   if (issue.body) {
-    bodyList.push(issue.body)
-  };
+    bodyList.push(issue.body);
+  }
 
-  const { data: comments } = await tools.github.issues.listComments({
-    ...tools.context.issue,
+  const { data: comments } = await octokit.rest.issues.listComments({
+    ...github.context.repo,
+    issue_number: github.context.issue.number,
   });
 
   for (let comment of comments) {
@@ -32,28 +39,35 @@ Toolkit.run(async (tools) => {
       containsChecklist = true;
 
       if (is_complete) {
-        tools.log.success("Completed task list item: " + item[2]);
+        console.log("Completed task list item: " + item[2]);
       } else {
-        tools.log.fatal("Incomplete task list item: " + item[2]);
+        console.log("Incomplete task list item: " + item[2]);
         incompleteItems.push(item[2]);
       }
     }
   }
 
   if (incompleteItems.length > 0) {
-    tools.exit.failure(
+    core.setFailed(
       "The following items are not marked as completed: " +
         incompleteItems.join(", ")
     );
     return;
   }
 
-  if (tools.inputs.requireChecklist != "false" && !containsChecklist) {
-    tools.exit.failure(
+  const requireChecklist = core.getInput("requireChecklist");
+  if (requireChecklist != "false" && !containsChecklist) {
+    core.setFailed(
       "No task list was present and requireChecklist is turned on"
     );
     return;
   }
 
-  tools.exit.success("There are no incomplete task list items");
-});
+  console.log("There are no incomplete task list items");
+}
+
+if (require.main === module) {
+  action();
+}
+
+module.exports = action;
