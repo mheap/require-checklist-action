@@ -20,6 +20,7 @@ jobs:
       - uses: mheap/require-checklist-action@v2
         with:
           requireChecklist: false # If this is true and there are no checklists detected, the action will fail
+          issueNumber: 1234 # The pull request number, used for when this action is triggered from another workflow
 ```
 
 ### Inapplicable checklist items
