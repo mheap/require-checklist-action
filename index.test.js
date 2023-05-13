@@ -222,6 +222,28 @@ describe("Require Checklist", () => {
 
     expect(core.setFailed).toBeCalledWith("Could not determine issue number");
   });
+
+  it("defaults to using the input issue number on pull_request event", async () => {
+    process.env.INPUT_ISSUENUMBER = 11;
+
+    mockIssueBody("Nothing in the body", process.env.INPUT_ISSUENUMBER);
+    mockIssueComments(
+      ["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"],
+      process.env.INPUT_ISSUENUMBER
+    );
+
+    console.log = jest.fn();
+    core.setFailed = jest.fn();
+    await action(tools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Two");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Three");
+
+    expect(core.setFailed).toBeCalledWith(
+      "The following items are not marked as completed: Two, Three"
+    );
+  });
 });
 
 function mockIssueBody(body, issueNumber = 17) {
