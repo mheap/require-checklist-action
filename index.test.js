@@ -212,7 +212,6 @@ describe("Require Checklist", () => {
   });
 
   it("handles missing issue number", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
     delete process.env.INPUT_ISSUENUMBER;
 
     const runTools = mockEvent("workflow_run", {});
