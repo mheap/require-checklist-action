@@ -10,7 +10,7 @@ async function action() {
   const octokit = github.getOctokit(token);
 
   const issueNumber =
-    github.context.issue?.number ?? core.getInput("issueNumber");
+    core.getInput("issueNumber") || github.context.issue?.number;
 
   core.debug(`issue number: ${issueNumber}`);
 
