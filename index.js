@@ -9,9 +9,19 @@ async function action() {
   const token = core.getInput("token");
   const octokit = github.getOctokit(token);
 
+  const issueNumber =
+    core.getInput("issueNumber") || github.context.issue?.number;
+
+  core.debug(`issue number: ${issueNumber}`);
+
+  if (!issueNumber) {
+    core.setFailed("Could not determine issue number");
+    return;
+  }
+
   const { data: issue } = await octokit.rest.issues.get({
     ...github.context.repo,
-    issue_number: github.context.issue.number,
+    issue_number: issueNumber,
   });
 
   if (issue.body) {
@@ -20,7 +30,7 @@ async function action() {
 
   const { data: comments } = await octokit.rest.issues.listComments({
     ...github.context.repo,
-    issue_number: github.context.issue.number,
+    issue_number: issueNumber,
   });
 
   for (let comment of comments) {

@@ -108,7 +108,6 @@ describe("Require Checklist", () => {
     mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"]);
 
     console.log = jest.fn();
-    console.log = jest.fn();
     core.setFailed = jest.fn();
     await action(tools);
 
@@ -155,23 +154,108 @@ describe("Require Checklist", () => {
 
     core.setFailed = jest.fn();
     await action(tools);
+
     expect(core.setFailed).toBeCalledWith(
       "No task list was present and requireChecklist is turned on"
     );
   });
+
+  it("handles using issue number input with completed checklist", async () => {
+    process.env.INPUT_REQUIRECHECKLIST = "true";
+    process.env.INPUT_ISSUENUMBER = 11;
+
+    const runTools = mockEvent("workflow_run", {});
+
+    mockIssueBody(
+      "Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] Three",
+      process.env.INPUT_ISSUENUMBER
+    );
+    mockIssueComments(["- [x] Comment done"], process.env.INPUT_ISSUENUMBER);
+
+    console.log = jest.fn();
+    await action(runTools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Completed task list item: Two");
+    expect(console.log).toBeCalledWith("Completed task list item: Three");
+    expect(console.log).toBeCalledWith(
+      "Completed task list item: Comment done"
+    );
+
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
+  it("handles using issue number input with incomplete checklist in comments", async () => {
+    process.env.INPUT_ISSUENUMBER = 11;
+
+    const runTools = mockEvent("workflow_run", {});
+
+    mockIssueBody("Nothing in the body", process.env.INPUT_ISSUENUMBER);
+    mockIssueComments(
+      ["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"],
+      process.env.INPUT_ISSUENUMBER
+    );
+
+    console.log = jest.fn();
+    core.setFailed = jest.fn();
+    await action(runTools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Two");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Three");
+
+    expect(core.setFailed).toBeCalledWith(
+      "The following items are not marked as completed: Two, Three"
+    );
+  });
+
+  it("handles missing issue number", async () => {
+    delete process.env.INPUT_ISSUENUMBER;
+
+    const runTools = mockEvent("workflow_run", {});
+
+    core.setFailed = jest.fn();
+    await action(runTools);
+
+    expect(core.setFailed).toBeCalledWith("Could not determine issue number");
+  });
+
+  it("defaults to using the input issue number on pull_request event", async () => {
+    process.env.INPUT_ISSUENUMBER = 11;
+
+    mockIssueBody("Nothing in the body", process.env.INPUT_ISSUENUMBER);
+    mockIssueComments(
+      ["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"],
+      process.env.INPUT_ISSUENUMBER
+    );
+
+    console.log = jest.fn();
+    core.setFailed = jest.fn();
+    await action(tools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Two");
+    expect(console.log).toBeCalledWith("Incomplete task list item: Three");
+
+    expect(core.setFailed).toBeCalledWith(
+      "The following items are not marked as completed: Two, Three"
+    );
+  });
 });
 
-function mockIssueBody(body) {
+function mockIssueBody(body, issueNumber = 17) {
   nock("https://api.github.com")
-    .get("/repos/YOUR_USERNAME/action-test/issues/17")
+    .get(`/repos/YOUR_USERNAME/action-test/issues/${issueNumber}`)
     .reply(200, {
       body,
     });
 }
 
-function mockIssueComments(comments) {
+function mockIssueComments(comments, issueNumber = 17) {
   nock("https://api.github.com")
-    .get("/repos/YOUR_USERNAME/action-test/issues/17/comments")
+    .get(`/repos/YOUR_USERNAME/action-test/issues/${issueNumber}/comments`)
     .reply(
       200,
       comments.map((c) => {
