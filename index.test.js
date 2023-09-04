@@ -103,6 +103,36 @@ describe("Require Checklist", () => {
     );
   });
 
+  it("handles checklist with commented out items", async () => {
+    mockIssueBody(
+      "Demo\r\n\r\n- [x] One\r\n<!-- Optional Tasks\n- [ ] Two\n-->"
+    );
+    mockIssueComments(["No checklist in comment"]);
+
+    console.log = jest.fn();
+    await action(tools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
+  it("handles checklist with commented out items on a single line", async () => {
+    mockIssueBody("Demo\r\n\r\n- [x] One\r\n<!-- - [ ] Two -->");
+    mockIssueComments(["No checklist in comment"]);
+
+    console.log = jest.fn();
+    await action(tools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
   it("handles incomplete checklist in comments", async () => {
     mockIssueBody("Nothing in the body");
     mockIssueComments(["Demo\r\n\r\n- [x] One\r\n- [ ] Two\n- [ ] Three"]);

@@ -2,6 +2,8 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 
 const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+((?!~).*)/g;
+const COMMENT_START = "<!--";
+const COMMENT_END = "-->";
 
 async function action() {
   const bodyList = [];
@@ -39,20 +41,33 @@ async function action() {
 
   // Check each comment for a checklist
   let containsChecklist = false;
+  let openComment = false;
   var incompleteItems = [];
   for (let body of bodyList) {
-    var matches = [...body.matchAll(TASK_LIST_ITEM)];
-    for (let item of matches) {
-      var is_complete = item[1] != " ";
-      var item_text = item[2];
+    // Break in to lines to do comment detection
+    for (let line of body.split("\n")) {
+      if (line.includes(COMMENT_START)) {
+        openComment = true;
+      }
 
-      containsChecklist = true;
+      if (line.includes(COMMENT_END)) {
+        openComment = false;
+      }
 
-      if (is_complete) {
-        console.log("Completed task list item: " + item[2]);
-      } else {
-        console.log("Incomplete task list item: " + item[2]);
-        incompleteItems.push(item[2]);
+      if (!openComment) {
+        var matches = [...line.matchAll(TASK_LIST_ITEM)];
+        for (let item of matches) {
+          var is_complete = item[1] != " ";
+
+          containsChecklist = true;
+
+          if (is_complete) {
+            console.log("Completed task list item: " + item[2]);
+          } else {
+            console.log("Incomplete task list item: " + item[2]);
+            incompleteItems.push(item[2]);
+          }
+        }
       }
     }
   }
