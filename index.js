@@ -30,13 +30,15 @@ async function action() {
     bodyList.push(issue.body);
   }
 
-  const { data: comments } = await octokit.rest.issues.listComments({
-    ...github.context.repo,
-    issue_number: issueNumber,
-  });
+  if (core.getInput("skipComments") != "true") {
+    const { data: comments } = await octokit.rest.issues.listComments({
+      ...github.context.repo,
+      issue_number: issueNumber,
+    });
 
-  for (let comment of comments) {
-    bodyList.push(comment.body);
+    for (let comment of comments) {
+      bodyList.push(comment.body);
+    }
   }
 
   // Check each comment for a checklist
