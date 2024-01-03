@@ -15,3 +15,7 @@ inputs:
     description: Require a checklist to exist
     required: false
     default: "false"
+  skipComments:
+    description: Do not look for checklists in comments
+    required: false
+    default: "false"

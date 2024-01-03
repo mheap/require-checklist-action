@@ -272,6 +272,21 @@ describe("Require Checklist", () => {
     expect(core.setFailed).toBeCalledWith(
       "The following items are not marked as completed: Two, Three"
     );
+
+    delete process.env.INPUT_ISSUENUMBER;
+  });
+
+  it("ignores checklists in comments when skipComments is enabled", async () => {
+    process.env.INPUT_REQUIRECHECKLIST = "false";
+    process.env.INPUT_SKIPCOMMENTS = "true";
+    mockIssueBody("Nothing in the body");
+
+    console.log = jest.fn();
+    await action(tools);
+
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
   });
 });
 
