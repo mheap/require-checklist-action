@@ -289,11 +289,12 @@ describe("Require Checklist", () => {
     );
   });
 
-  it("ignores items that match the skipDescriptionRegex pattern", async () => {
+  it("ignores items that match the skipDescriptionRegex + skipDescriptionRegexFlags args", async () => {
     process.env.INPUT_REQUIRECHECKLIST = "true";
-    process.env.INPUT_SKIPDESCRIPTIONREGEX = "\(Optional\)";
+    process.env.INPUT_SKIPDESCRIPTIONREGEX = ".*\(optional\).*";
+    process.env.INPUT_SKIPDESCRIPTIONREGEXFLAGS = "i";
 
-    mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] (Optional) This is skipped");
+    mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] This is (Optional) skipped");
 
     console.log = jest.fn();
 
@@ -301,11 +302,14 @@ describe("Require Checklist", () => {
 
     expect(console.log).toBeCalledWith("Completed task list item: One");
     expect(console.log).toBeCalledWith("Completed task list item: Two");
-    expect(console.log).toBeCalledWith("Skipping task list item: (Optional) This is skipped");
+    expect(console.log).toBeCalledWith("Skipping task list item: This is (Optional) skipped");
 
     expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
+
+    delete process.env.INPUT_SKIPDESCRIPTIONREGEX;
+    delete process.env.INPUT_SKIPDESCRIPTIONREGEXFLAGS;
   });
 });
 

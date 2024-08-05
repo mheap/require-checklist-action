@@ -11,7 +11,8 @@ async function action() {
   const token = core.getInput("token");
   const octokit = github.getOctokit(token);
   const skipRegexPattern = core.getInput("skipDescriptionRegex");
-  const skipDescriptionRegex = !!skipRegexPattern ? new RegExp(skipRegexPattern) : false;
+  const skipRegexFlags = core.getInput("skipDescriptionRegexFlags");
+  const skipDescriptionRegex = !!skipRegexPattern ? new RegExp(skipRegexPattern, skipRegexFlags) : false;
 
   const issueNumber =
     core.getInput("issueNumber") || github.context.issue?.number;

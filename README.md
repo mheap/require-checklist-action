@@ -53,7 +53,9 @@ jobs:
 
 ### Optional checkboxes
 
-Optional checkboxes can be applied with the `skipDescriptionRegex` argument, which supports any regex statement supported by [Javascript's RegExp class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp).
+Optional checkboxes can be applied with the `skipDescriptionRegex` and `skipDescriptionRegexFlags` arguments, which correspond to the first and second constructor arguments of [Javascript's RegExp class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp).
+
+Here is an example of skipping any description with including "(Optional)". (case-insensitive).
 
 ```yaml
 name: Require Checklist
@@ -70,7 +72,8 @@ jobs:
     steps:
       - uses: mheap/require-checklist-action@v2
         with:
-          skipDescriptionRegex: ^\(Optional\)
+          skipDescriptionRegex: .*\(optional\).*
+          skipDescriptionRegexFlags: i
 ```
 
 ### Inapplicable checklist items
