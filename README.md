@@ -58,13 +58,7 @@ Optional checkboxes can be applied with the `skipDescriptionRegex` and `skipDesc
 Here is an example of skipping any description with including "(Optional)". (case-insensitive).
 
 ```yaml
-name: Require Checklist
-
-on:
-  pull_request:
-    types: [opened, edited, synchronize]
-  issues:
-    types: [opened, edited, deleted]
+# ...
 
 jobs:
   job1:
