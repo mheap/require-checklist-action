@@ -288,6 +288,25 @@ describe("Require Checklist", () => {
       "There are no incomplete task list items"
     );
   });
+
+  it("ignores items that match the skipDescriptionRegex pattern", async () => {
+    process.env.INPUT_REQUIRECHECKLIST = "true";
+    process.env.INPUT_SKIPDESCRIPTIONREGEX = "\(Optional\)";
+
+    mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] (Optional) This is skipped");
+
+    console.log = jest.fn();
+
+    await action(tools);
+
+    expect(console.log).toBeCalledWith("Completed task list item: One");
+    expect(console.log).toBeCalledWith("Completed task list item: Two");
+    expect(console.log).toBeCalledWith("Skipping task list item: (Optional) This is skipped");
+
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
 });
 
 function mockIssueBody(body, issueNumber = 17) {
