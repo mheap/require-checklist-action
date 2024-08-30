@@ -19,3 +19,7 @@ inputs:
     description: Do not look for checklists in comments
     required: false
     default: "false"
+  skipDescriptionRegex:
+    description: A regex pattern of descriptions that will be skipped if matched
+    required: false
+    default: undefined

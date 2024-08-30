@@ -10,6 +10,9 @@ async function action() {
 
   const token = core.getInput("token");
   const octokit = github.getOctokit(token);
+  const skipRegexPattern = core.getInput("skipDescriptionRegex");
+  const skipRegexFlags = core.getInput("skipDescriptionRegexFlags");
+  const skipDescriptionRegex = !!skipRegexPattern ? new RegExp(skipRegexPattern, skipRegexFlags) : false;
 
   const issueNumber =
     core.getInput("issueNumber") || github.context.issue?.number;
@@ -60,6 +63,11 @@ async function action() {
         var matches = [...line.matchAll(TASK_LIST_ITEM)];
         for (let item of matches) {
           var is_complete = item[1] != " ";
+
+          if(skipRegexPattern && skipDescriptionRegex.test(item[2])) {
+            console.log("Skipping task list item: " + item[2]);
+            continue;
+          }
 
           containsChecklist = true;
 

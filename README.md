@@ -51,6 +51,25 @@ jobs:
           issueNumber: ${{ github.event.workflow_run.pull_requests[0].number }}
 ```
 
+### Optional checkboxes
+
+Optional checkboxes can be applied with the `skipDescriptionRegex` and `skipDescriptionRegexFlags` arguments, which correspond to the first and second constructor arguments of [Javascript's RegExp class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp).
+
+Here is an example of skipping any description with including "(Optional)". (case-insensitive).
+
+```yaml
+# ...
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mheap/require-checklist-action@v2
+        with:
+          skipDescriptionRegex: .*\(optional\).*
+          skipDescriptionRegexFlags: i
+```
+
 ### Inapplicable checklist items
 
 In case there are some items that are not applicable in given checklist they can be ~stroked through~ and this action will ignore them. For example:
