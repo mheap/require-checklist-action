@@ -24,6 +24,24 @@ describe("Require Checklist", () => {
     });
   });
 
+  it.only("parses the issue number out of the ref for merge_queue runs", async () => {
+    delete process.env.INPUT_ISSUENUMBER;
+    process.env.INPUT_REQUIRECHECKLIST = "false";
+
+    const runTools = mockEvent("merge_queue", {}, {
+      ref: "refs/heads/gh-readonly-queue/main/pr-17-a3c310584587d4b97c2df0cb46fe050cc46a15d6"
+    });
+
+    mockIssueBody("No checklist in the body");
+    mockIssueComments(["Or in the comments"]);
+
+    console.log = jest.fn();
+    await action(runTools);
+    expect(console.log).toBeCalledWith(
+      "There are no incomplete task list items"
+    );
+  });
+
   it("handles issues with no checklist, requireChecklist disabled", async () => {
     process.env.INPUT_REQUIRECHECKLIST = "false";
 
@@ -332,8 +350,13 @@ function mockIssueComments(comments, issueNumber = 17) {
     );
 }
 
-function mockEvent(name, mockPayload) {
+function mockEvent(name, mockPayload, additionalContext = {}) {
   github.context.payload = mockPayload;
+  github.context.eventName = name;
+
+  for (const key in additionalContext) {
+    github.context[key] = additionalContext[key];
+  }
 
   process.env.GITHUB_EVENT_NAME = name;
   process.env.GITHUB_EVENT_PATH = "/github/workspace/event.json";

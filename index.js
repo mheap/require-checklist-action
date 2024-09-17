@@ -14,8 +14,15 @@ async function action() {
   const skipRegexFlags = core.getInput("skipDescriptionRegexFlags");
   const skipDescriptionRegex = !!skipRegexPattern ? new RegExp(skipRegexPattern, skipRegexFlags) : false;
 
-  const issueNumber =
+  let issueNumber =
     core.getInput("issueNumber") || github.context.issue?.number;
+
+  if (!issueNumber && github.context.eventName == "merge_queue") {
+    // Parse out of the ref for merge queue
+    // e.g. refs/heads/gh-readonly-queue/main/pr-17-a3c310584587d4b97c2df0cb46fe050cc46a15d6
+    const lastPart = github.context.ref.split("/").pop();
+    issueNumber = lastPart.match(/pr-(\d+)-/)[1];
+  }
 
   core.debug(`issue number: ${issueNumber}`);
 
