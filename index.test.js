@@ -324,7 +324,6 @@ describe("Require Checklist", () => {
     });
 
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] This is (Optional) skipped");
-    mockIssueComments([], process.env.INPUT_ISSUENUMBER);
 
     console.log = jest.fn();
 
@@ -338,6 +337,56 @@ describe("Require Checklist", () => {
       "There are no incomplete task list items"
     );
   });
+
+  describe("Pseudo radio-button checklists", () => {
+    it("handles issues with acceptably completed checklist", async () => {
+      mockIssueBody("Demo\r\n- [x] Identify the cat\r\n- [x] Pet the cat <!-- TaskRadio Alpha -->\r\n- [ ] Flee the cat <!-- TaskRadio Alpha -->\r\n- [ ] Report the incident <!-- TaskRadio 2 -->\r\n- [x] Hide in shame <!-- TaskRadio 2 -->");
+      mockIssueComments(["- [x] Comment done <!-- TaskRadio Alpha -->\r\n - [ ] Uncomment done <!-- TaskRadio Alpha -->"]);
+
+      console.log = jest.fn();
+      core.setFailed = jest.fn();
+
+      await action(tools);
+
+      expect(core.setFailed).not.toHaveBeenCalled()
+
+      expect(console.log).toBeCalledWith("Completed task list item: Identify the cat");
+      expect(console.log).toBeCalledWith("Completed task list item: Pet the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Flee the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Report the incident <!-- TaskRadio 2 -->");
+      expect(console.log).toBeCalledWith("Completed task list item: Hide in shame <!-- TaskRadio 2 -->");
+
+      expect(console.log).toBeCalledWith("Completed task list item: Comment done <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Uncomment done <!-- TaskRadio Alpha -->");
+
+      expect(console.log).toBeCalledWith(
+        "There are no incomplete task list items"
+      );
+    });
+
+    it("handles issues with unacceptable multi-select", async () => {
+      mockIssueBody("Demo\r\n- [x] Identify the cat\r\n- [x] Pet the cat <!-- TaskRadio Alpha -->\r\n- [ ] Flee the cat <!-- TaskRadio Alpha -->\r\n- [ ] Report the incident <!-- TaskRadio 2 -->\r\n- [x] Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->");
+      mockIssueComments(["- [x] Comment done <!-- TaskRadio Alpha -->\r\n - [ ] Uncomment done <!-- TaskRadio Alpha -->"]);
+
+      console.log = jest.fn();
+      core.setFailed = jest.fn();
+
+      await action(tools);
+
+      expect(console.log).toBeCalledWith("Completed task list item: Identify the cat");
+      expect(console.log).toBeCalledWith("Completed task list item: Pet the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Flee the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Report the incident <!-- TaskRadio 2 -->");
+      expect(console.log).toBeCalledWith("Completed task list item: Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->");
+
+      expect(console.log).toBeCalledWith("Completed task list item: Comment done <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Uncomment done <!-- TaskRadio Alpha -->");
+
+      expect(core.setFailed).toBeCalledWith(
+        "The following items cannot be marked as completed simultaneously: Pet the cat <!-- TaskRadio Alpha -->, Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->"
+      );
+    });
+  })
 });
 
 function mockIssueBody(body, issueNumber = 17) {
