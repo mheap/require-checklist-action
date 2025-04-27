@@ -3,6 +3,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const nock = require("nock");
 nock.disableNetConnect();
+const mockEnv = require("mocked-env");
 
 process.env.GITHUB_WORKFLOW = "demo-workflow";
 process.env.GITHUB_ACTION = "require-checklist-action";
@@ -11,6 +12,10 @@ process.env.GITHUB_REPOSITORY = "YOUR_USERNAME/action-test";
 process.env.GITHUB_WORKSPACE = "/tmp/github/workspace";
 process.env.GITHUB_SHA = "fake-sha-a1c85481edd2ea7d19052874ea3743caa8f1bdf6";
 process.env.INPUT_TOKEN = "FAKE_GITHUB_TOKEN";
+
+// Variables to store references to what we need to reset
+let restore;
+let restoreTest;
 
 describe("Require Checklist", () => {
   let tools;
@@ -22,10 +27,19 @@ describe("Require Checklist", () => {
       action: "opened",
       pull_request: { number: 17 },
     });
+
+    restoreTest = () => { };
+  });
+
+  afterEach(() => {
+    restore();
+    restoreTest();
   });
 
   it("handles issues with no checklist, requireChecklist disabled", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "false";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "false",
+    });
 
     mockIssueBody("No checklist in the body");
     mockIssueComments(["Or in the comments"]);
@@ -38,7 +52,9 @@ describe("Require Checklist", () => {
   });
 
   it("handles issues with completed checklist", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true",
+    });
 
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] Three");
     mockIssueComments(["- [x] Comment done"]);
@@ -60,7 +76,9 @@ describe("Require Checklist", () => {
   });
 
   it("handles issues with no checklist, requireChecklist enabled", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true",
+    });
 
     mockIssueBody("No checklist in the body");
     mockIssueComments(["Or in the comments"]);
@@ -165,7 +183,9 @@ describe("Require Checklist", () => {
   });
 
   it("handles issues with empty body, requireChecklist disabled", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "false";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "false"
+    });
 
     mockIssueBody(null);
     mockIssueComments(["No checklist in comment"]);
@@ -177,7 +197,9 @@ describe("Require Checklist", () => {
   });
 
   it("handles issues with empty body, requireChecklist enabled", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true"
+    });
 
     mockIssueBody(null);
     mockIssueComments(["No checklist in comment"]);
@@ -191,8 +213,10 @@ describe("Require Checklist", () => {
   });
 
   it("handles using issue number input with completed checklist", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
-    process.env.INPUT_ISSUENUMBER = 11;
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true",
+      INPUT_ISSUENUMBER: "11"
+    });
 
     const runTools = mockEvent("workflow_run", {});
 
@@ -218,7 +242,9 @@ describe("Require Checklist", () => {
   });
 
   it("handles using issue number input with incomplete checklist in comments", async () => {
-    process.env.INPUT_ISSUENUMBER = 11;
+    restoreTest = mockEnv({
+      INPUT_ISSUENUMBER: "11"
+    });
 
     const runTools = mockEvent("workflow_run", {});
 
@@ -242,8 +268,6 @@ describe("Require Checklist", () => {
   });
 
   it("handles missing issue number", async () => {
-    delete process.env.INPUT_ISSUENUMBER;
-
     const runTools = mockEvent("workflow_run", {});
 
     core.setFailed = jest.fn();
@@ -253,7 +277,9 @@ describe("Require Checklist", () => {
   });
 
   it("defaults to using the input issue number on pull_request event", async () => {
-    process.env.INPUT_ISSUENUMBER = 11;
+    restoreTest = mockEnv({
+      INPUT_ISSUENUMBER: "11"
+    });
 
     mockIssueBody("Nothing in the body", process.env.INPUT_ISSUENUMBER);
     mockIssueComments(
@@ -272,29 +298,33 @@ describe("Require Checklist", () => {
     expect(core.setFailed).toBeCalledWith(
       "The following items are not marked as completed: Two, Three"
     );
-
-    delete process.env.INPUT_ISSUENUMBER;
   });
 
   it("ignores checklists in comments when skipComments is enabled", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "false";
-    process.env.INPUT_SKIPCOMMENTS = "true";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true",
+      INPUT_SKIPCOMMENTS: "true"
+    });
     mockIssueBody("Nothing in the body");
 
-    console.log = jest.fn();
+    core.setFailed = jest.fn();
     await action(tools);
 
-    expect(console.log).toBeCalledWith(
-      "There are no incomplete task list items"
+    expect(core.setFailed).toBeCalledWith(
+      "No task list was present and requireChecklist is turned on"
     );
   });
 
   it("ignores items that match the skipDescriptionRegex + skipDescriptionRegexFlags args", async () => {
-    process.env.INPUT_REQUIRECHECKLIST = "true";
-    process.env.INPUT_SKIPDESCRIPTIONREGEX = ".*\(optional\).*";
-    process.env.INPUT_SKIPDESCRIPTIONREGEXFLAGS = "i";
+    restoreTest = mockEnv({
+      INPUT_REQUIRECHECKLIST: "true",
+      INPUT_SKIPDESCRIPTIONREGEX: ".*\(optional\).*",
+      INPUT_SKIPDESCRIPTIONREGEXFLAGS: "i",
+      INPUT_SKIPCOMMENTS: "true"
+    });
 
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] This is (Optional) skipped");
+    mockIssueComments([], process.env.INPUT_ISSUENUMBER);
 
     console.log = jest.fn();
 
@@ -307,9 +337,6 @@ describe("Require Checklist", () => {
     expect(console.log).toBeCalledWith(
       "There are no incomplete task list items"
     );
-
-    delete process.env.INPUT_SKIPDESCRIPTIONREGEX;
-    delete process.env.INPUT_SKIPDESCRIPTIONREGEXFLAGS;
   });
 });
 
@@ -335,6 +362,8 @@ function mockIssueComments(comments, issueNumber = 17) {
 function mockEvent(name, mockPayload) {
   github.context.payload = mockPayload;
 
-  process.env.GITHUB_EVENT_NAME = name;
-  process.env.GITHUB_EVENT_PATH = "/github/workspace/event.json";
+  restore = mockEnv({
+    GITHUB_EVENT_NAME: name,
+    GITHUB_EVENT_PATH: "/github/workspace/event.json",
+  });
 }
