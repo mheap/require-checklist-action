@@ -1,10 +1,10 @@
-const action = require(".");
-const core = require("@actions/core");
-const github = require("@actions/github");
-const nock = require("nock");
-nock.disableNetConnect();
+const http = require("node:http");
+const express = require("express");
+const fakeApiApp = express()
+const fakeApiServer = http.createServer(fakeApiApp);
 const mockEnv = require("mocked-env");
 
+process.env.GITHUB_API = "demo-workflow";
 process.env.GITHUB_WORKFLOW = "demo-workflow";
 process.env.GITHUB_ACTION = "require-checklist-action";
 process.env.GITHUB_ACTOR = "YOUR_USERNAME";
@@ -18,15 +18,64 @@ let restore;
 let restoreTest;
 
 describe("Require Checklist", () => {
-  let tools;
+  let action, core, github;
+  let issueNumber = 42;
+
+  const makeTools = (num = issueNumber) => {
+    return mockEvent("pull_request", {
+      action: "opened",
+      pull_request: { number: num },
+    })
+  };
+
+  const mockIssueBody = (body, num = issueNumber) => {
+    fakeApiApp.get(
+      `/repos/YOUR_USERNAME/action-test/issues/${num}`,
+      (_req, res) => res.json({ body })
+    );
+  }
+
+  const mockIssueComments = (comments, num = issueNumber) => {
+    fakeApiApp.get(
+      `/repos/YOUR_USERNAME/action-test/issues/${num}/comments`,
+      (_req, res) => res.json(comments.map((c) => {
+        return { body: c };
+      }))
+    );
+  }
+
+  const mockEvent = (name, mockPayload) => {
+    github.context.payload = mockPayload;
+
+    restore = mockEnv({
+      GITHUB_EVENT_NAME: name,
+      GITHUB_EVENT_PATH: "/github/workspace/event.json",
+    });
+  }
+
+  beforeAll(async () => {
+    // Wait for server listening event (or fail on error)
+    await new Promise((resolve, reject) => {
+      fakeApiServer.on('error', (e) => reject(e));
+      fakeApiServer.on('listening', () => resolve());
+      fakeApiServer.listen(0, '127.0.0.1');
+    })
+
+    const fakeApiAddress = fakeApiServer.address();
+    process.env.GITHUB_API_URL = `http://${fakeApiAddress.address}:${fakeApiAddress.port}`;
+
+    // We need to require late - actions libraries initialize defaults way too early
+    action = require(".");
+    core = require("@actions/core");
+    github = require("@actions/github");
+  })
+
+  afterAll(() => fakeApiServer.close())
 
   beforeEach(() => {
     jest.resetModules();
 
-    tools = mockEvent("pull_request", {
-      action: "opened",
-      pull_request: { number: 17 },
-    });
+    tools = makeTools();
 
     restoreTest = () => { };
   });
@@ -34,6 +83,7 @@ describe("Require Checklist", () => {
   afterEach(() => {
     restore();
     restoreTest();
+    issueNumber++;
   });
 
   it("handles issues with no checklist, requireChecklist disabled", async () => {
@@ -66,13 +116,8 @@ describe("Require Checklist", () => {
     expect(console.log).toBeCalledWith("Completed task list item: One");
     expect(console.log).toBeCalledWith("Completed task list item: Two");
     expect(console.log).toBeCalledWith("Completed task list item: Three");
-    expect(console.log).toBeCalledWith(
-      "Completed task list item: Comment done"
-    );
-
-    expect(console.log).toBeCalledWith(
-      "There are no incomplete task list items"
-    );
+    expect(console.log).toBeCalledWith("Completed task list item: Comment done");
+    expect(console.log).toBeCalledWith("There are no incomplete task list items");
   });
 
   it("handles issues with no checklist, requireChecklist enabled", async () => {
@@ -215,7 +260,7 @@ describe("Require Checklist", () => {
   it("handles using issue number input with completed checklist", async () => {
     restoreTest = mockEnv({
       INPUT_REQUIRECHECKLIST: "true",
-      INPUT_ISSUENUMBER: "11"
+      INPUT_ISSUENUMBER: `${issueNumber}`
     });
 
     const runTools = mockEvent("workflow_run", {});
@@ -243,7 +288,7 @@ describe("Require Checklist", () => {
 
   it("handles using issue number input with incomplete checklist in comments", async () => {
     restoreTest = mockEnv({
-      INPUT_ISSUENUMBER: "11"
+      INPUT_ISSUENUMBER: `${issueNumber}`
     });
 
     const runTools = mockEvent("workflow_run", {});
@@ -278,7 +323,7 @@ describe("Require Checklist", () => {
 
   it("defaults to using the input issue number on pull_request event", async () => {
     restoreTest = mockEnv({
-      INPUT_ISSUENUMBER: "11"
+      INPUT_ISSUENUMBER: `${issueNumber}`
     });
 
     mockIssueBody("Nothing in the body", process.env.INPUT_ISSUENUMBER);
@@ -324,7 +369,6 @@ describe("Require Checklist", () => {
     });
 
     mockIssueBody("Demo\r\n\r\n- [x] One\r\n- [x] Two\n- [x] This is (Optional) skipped");
-    mockIssueComments([], process.env.INPUT_ISSUENUMBER);
 
     console.log = jest.fn();
 
@@ -338,32 +382,54 @@ describe("Require Checklist", () => {
       "There are no incomplete task list items"
     );
   });
-});
 
-function mockIssueBody(body, issueNumber = 17) {
-  nock("https://api.github.com")
-    .get(`/repos/YOUR_USERNAME/action-test/issues/${issueNumber}`)
-    .reply(200, {
-      body,
+  describe("Pseudo radio-button checklists", () => {
+    it("handles issues with acceptably completed checklist", async () => {
+      mockIssueBody("Demo\r\n- [x] Identify the cat\r\n- [x] Pet the cat <!-- TaskRadio Alpha -->\r\n- [ ] Flee the cat <!-- TaskRadio Alpha -->\r\n- [ ] Report the incident <!-- TaskRadio 2 -->\r\n- [x] Hide in shame <!-- TaskRadio 2 -->");
+      mockIssueComments(["- [x] Comment done <!-- TaskRadio Alpha -->\r\n - [ ] Uncomment done <!-- TaskRadio Alpha -->"]);
+
+      console.log = jest.fn();
+      core.setFailed = jest.fn();
+
+      await action(tools);
+
+      expect(core.setFailed).not.toHaveBeenCalled()
+
+      expect(console.log).toBeCalledWith("Completed task list item: Identify the cat");
+      expect(console.log).toBeCalledWith("Completed task list item: Pet the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Flee the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Report the incident <!-- TaskRadio 2 -->");
+      expect(console.log).toBeCalledWith("Completed task list item: Hide in shame <!-- TaskRadio 2 -->");
+
+      expect(console.log).toBeCalledWith("Completed task list item: Comment done <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Uncomment done <!-- TaskRadio Alpha -->");
+
+      expect(console.log).toBeCalledWith(
+        "There are no incomplete task list items"
+      );
     });
-}
 
-function mockIssueComments(comments, issueNumber = 17) {
-  nock("https://api.github.com")
-    .get(`/repos/YOUR_USERNAME/action-test/issues/${issueNumber}/comments`)
-    .reply(
-      200,
-      comments.map((c) => {
-        return { body: c };
-      })
-    );
-}
+    it("handles issues with unacceptable multi-select", async () => {
+      mockIssueBody("Demo\r\n- [x] Identify the cat\r\n- [x] Pet the cat <!-- TaskRadio Alpha -->\r\n- [ ] Flee the cat <!-- TaskRadio Alpha -->\r\n- [ ] Report the incident <!-- TaskRadio 2 -->\r\n- [x] Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->");
+      mockIssueComments(["- [x] Comment done <!-- TaskRadio Alpha -->\r\n - [ ] Uncomment done <!-- TaskRadio Alpha -->"]);
 
-function mockEvent(name, mockPayload) {
-  github.context.payload = mockPayload;
+      console.log = jest.fn();
+      core.setFailed = jest.fn();
 
-  restore = mockEnv({
-    GITHUB_EVENT_NAME: name,
-    GITHUB_EVENT_PATH: "/github/workspace/event.json",
-  });
-}
+      await action(tools);
+
+      expect(console.log).toBeCalledWith("Completed task list item: Identify the cat");
+      expect(console.log).toBeCalledWith("Completed task list item: Pet the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Flee the cat <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Report the incident <!-- TaskRadio 2 -->");
+      expect(console.log).toBeCalledWith("Completed task list item: Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->");
+
+      expect(console.log).toBeCalledWith("Completed task list item: Comment done <!-- TaskRadio Alpha -->");
+      expect(console.log).toBeCalledWith("Incomplete task list item: Uncomment done <!-- TaskRadio Alpha -->");
+
+      expect(core.setFailed).toBeCalledWith(
+        "The following items cannot be marked as completed simultaneously: Pet the cat <!-- TaskRadio Alpha -->, Hide in shame <!-- TaskRadio 2 --> <!-- TaskRadio Alpha -->"
+      );
+    });
+  })
+});
