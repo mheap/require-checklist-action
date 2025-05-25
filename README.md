@@ -76,3 +76,39 @@ In case there are some items that are not applicable in given checklist they can
 
 - [X] Applicable item
 - [ ] ~Inapplicable item~
+
+### Radio groups
+
+In case some checkboxes should not be selected at the same time, mark them with `TaskRadio <name>` html comment.
+
+E.g.:
+
+```markdown
+- [ ] Identify the cat
+- [ ] Pet the cat <!-- TaskRadio one -->
+- [ ] Flee the cat <!-- TaskRadio one -->
+```
+
+Will make require only "Pet the cat" or "Flee the cat" to be selected, but not both.
+
+Multiple groups can be present:
+
+```markdown
+- [ ] Identify the cat
+- [ ] Pet the cat <!-- TaskRadio one -->
+- [ ] Flee the cat <!-- TaskRadio one -->
+- [ ] Report the incident <!-- TaskRadio two -->
+- [ ] Hide in shame <!-- TaskRadio two -->
+```
+
+Item can belong to multiple groups:
+
+```markdown
+- [ ] Identify the cat
+- [ ] Pet the cat <!-- TaskRadio one -->
+- [ ] Flee the cat <!-- TaskRadio one -->
+- [ ] Report the incident <!-- TaskRadio two -->
+- [ ] Hide in shame <!-- TaskRadio two --> <!-- TaskRadio one -->
+```
+
+Existence of a valid combination remains a responsibility of the user.

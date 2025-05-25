@@ -1,9 +1,12 @@
+// @ts-check
+
 const core = require("@actions/core");
 const github = require("@actions/github");
 
-const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[([ xX])\]\s+((?!~).*)/g;
+const TASK_LIST_ITEM = /(?:^|\n)\s*-\s+\[(?<checkMark>[ xX])\]\s+(?<text>(?!~).*)/g;
 const COMMENT_START = "<!--";
 const COMMENT_END = "-->";
+const RADIO_TAG_ITEM = /<!-- TaskRadio (?<radioTag>\S+) -->/g
 
 async function action() {
   const bodyList = [];
@@ -15,7 +18,7 @@ async function action() {
   const skipDescriptionRegex = !!skipRegexPattern ? new RegExp(skipRegexPattern, skipRegexFlags) : false;
 
   const issueNumber =
-    core.getInput("issueNumber") || github.context.issue?.number;
+    parseInt(core.getInput("issueNumber")) || github.context.issue?.number;
 
   core.debug(`issue number: ${issueNumber}`);
 
@@ -44,54 +47,124 @@ async function action() {
     }
   }
 
-  // Check each comment for a checklist
-  let containsChecklist = false;
-  let openComment = false;
-  var incompleteItems = [];
+  /**
+   * @typedef {Object} ChecklistItem
+   * @property {string} text
+   * @property {string[]} radioGroups
+   * @property {boolean} isComplete
+   */
+
+  /** @type ChecklistItem[][] */
+  let checklistBodies = []
+
+  // Collect check list items
   for (let body of bodyList) {
+    // Check each comment for a checklist
+    let multilineComment = false;
+
+    if (typeof body === "undefined") continue
+
+    /** @type ChecklistItem[] */
+    let checklistItems = []
+
     // Break in to lines to do comment detection
     for (let line of body.split("\n")) {
-      if (line.includes(COMMENT_START)) {
-        openComment = true;
+      // NOTE: Assume we never start nor end a multiline comment in the middle of a line... for now
+      if (line.lastIndexOf(COMMENT_START) > line.lastIndexOf(COMMENT_END)) {
+        multilineComment = true;
+      }
+      if (line.lastIndexOf(COMMENT_START) < line.lastIndexOf(COMMENT_END)) {
+        multilineComment = false;
       }
 
-      if (line.includes(COMMENT_END)) {
-        openComment = false;
-      }
+      if (!multilineComment) {
+        /**
+         * @typedef {Object} TaskItem
+         * @property {string} checkMark
+         * @property {string} text
+         */
+        for (let match of line.matchAll(TASK_LIST_ITEM)) {
+          if (typeof match.groups === "undefined") continue
 
-      if (!openComment) {
-        var matches = [...line.matchAll(TASK_LIST_ITEM)];
-        for (let item of matches) {
-          var is_complete = item[1] != " ";
+          /** @type TaskItem */
+          let item = (({checkMark, text}) => ({checkMark: checkMark || "", text: text || ""}))(match.groups)
+          let is_complete = ["x", "X"].includes(item.checkMark);
 
-          if(skipRegexPattern && skipDescriptionRegex.test(item[2])) {
-            console.log("Skipping task list item: " + item[2]);
+          if (skipRegexPattern && skipDescriptionRegex && skipDescriptionRegex.test(item.text)) {
+            console.log("Skipping task list item: " + item.text);
             continue;
           }
 
-          containsChecklist = true;
-
           if (is_complete) {
-            console.log("Completed task list item: " + item[2]);
+            console.log("Completed task list item: " + item.text);
           } else {
-            console.log("Incomplete task list item: " + item[2]);
-            incompleteItems.push(item[2]);
+            console.log("Incomplete task list item: " + item.text);
           }
+
+          checklistItems.push({
+            text: item.text,
+            radioGroups: [...item.text.matchAll(RADIO_TAG_ITEM)].map((radioMatch) => radioMatch.groups && radioMatch.groups.radioTag || "").filter((tag) => tag),
+            isComplete: is_complete
+          })
         }
       }
+    }
+
+    if (checklistItems.length > 0) checklistBodies.push(checklistItems)
+  }
+
+  /**
+   * @typedef {Object.<string, ChecklistItem[]>} ChecklistRadioGroup
+   */
+
+  /** @type ChecklistItem[] */
+  let incompleteItems = []
+  /** @type ChecklistItem[][] */
+  let radioConflictItems = []
+
+  for (let items of checklistBodies) {
+    /** @type ChecklistRadioGroup */
+    let radioGroupedItems = {}
+
+    for (let item of items) {
+      if (item.radioGroups.length == 0 && !item.isComplete) {
+        incompleteItems.push(item)
+        continue
+      }
+
+      for (let radioGroup of item.radioGroups) {
+        if (typeof radioGroupedItems[radioGroup] === "undefined") radioGroupedItems[radioGroup] = []
+        radioGroupedItems[radioGroup].push(item)
+      }
+    }
+
+    for (let group in radioGroupedItems) {
+      let completedItems = radioGroupedItems[group].filter((item) => item.isComplete)
+
+      if (completedItems.length == 0) incompleteItems.push(...radioGroupedItems[group])
+      if (completedItems.length > 1) radioConflictItems.push(completedItems)
     }
   }
 
   if (incompleteItems.length > 0) {
     core.setFailed(
       "The following items are not marked as completed: " +
-        incompleteItems.join(", ")
+        incompleteItems.map((item) => item.text).join(", ")
     );
-    return;
+  }
+
+  if (radioConflictItems.length > 0) {
+    for (let items of radioConflictItems) {
+      core.setFailed(
+        "The following items cannot be marked as completed simultaneously: " +
+          items.map((item) => item.text).join(", ")
+      )
+    }
+    return
   }
 
   const requireChecklist = core.getInput("requireChecklist");
-  if (requireChecklist != "false" && !containsChecklist) {
+  if (requireChecklist != "false" && checklistBodies.length == 0) {
     core.setFailed(
       "No task list was present and requireChecklist is turned on"
     );
