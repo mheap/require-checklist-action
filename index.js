@@ -67,7 +67,7 @@ async function action() {
     /** @type ChecklistItem[] */
     let checklistItems = []
 
-    // Break in to lines to do comment detection
+    // Break into lines to do comment detection
     for (let line of body.split("\n")) {
       // NOTE: Assume we never start nor end a multiline comment in the middle of a line... for now
       if (line.lastIndexOf(COMMENT_START) > line.lastIndexOf(COMMENT_END)) {
@@ -87,7 +87,7 @@ async function action() {
           if (typeof match.groups === "undefined") continue
 
           /** @type TaskItem */
-          let item = (({checkMark, text}) => ({checkMark: checkMark || "", text: text || ""}))(match.groups)
+          let item = (({ checkMark, text }) => ({ checkMark: checkMark || "", text: text || "" }))(match.groups)
           let is_complete = ["x", "X"].includes(item.checkMark);
 
           if (skipRegexPattern && skipDescriptionRegex && skipDescriptionRegex.test(item.text)) {
@@ -149,7 +149,7 @@ async function action() {
   if (incompleteItems.length > 0) {
     core.setFailed(
       "The following items are not marked as completed: " +
-        incompleteItems.map((item) => item.text).join(", ")
+      incompleteItems.map((item) => item.text).join(", ")
     );
   }
 
@@ -157,7 +157,7 @@ async function action() {
     for (let items of radioConflictItems) {
       core.setFailed(
         "The following items cannot be marked as completed simultaneously: " +
-          items.map((item) => item.text).join(", ")
+        items.map((item) => item.text).join(", ")
       )
     }
     return
