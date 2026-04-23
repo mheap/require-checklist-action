@@ -1,8 +1,8 @@
 name: Require Checklist
 description: Ensure that any checklists in an issue/pull request are completed
 runs:
-  using: docker
-  image: Dockerfile
+  using: node20
+  main: dist/index.js
 branding:
   icon: check-square
   color: gray-dark
@@ -14,11 +14,11 @@ inputs:
   requireChecklist:
     description: Require a checklist to exist
     required: false
-    default: "false"
+    default: 'false'
   skipComments:
     description: Do not look for checklists in comments
     required: false
-    default: "false"
+    default: 'false'
   skipDescriptionRegex:
     description: A regex pattern of descriptions that will be skipped if matched
     required: false
